@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lytchett Manor Striders - Club Championships</title>
+<style>
+  .lms-container { 
+    font-family: Arial, sans-serif; 
+    width: 100%; 
+    box-sizing: border-box; 
+  }
+  .lms-controls { 
+    margin-bottom: 20px; 
+    padding: 15px; 
+    background: #eef; 
+    border-radius: 5px; 
+    border: 1px solid #ccd; 
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .lms-controls label { 
+    font-weight: bold; 
+    font-size: 15px; 
+  }
+  .lms-controls input[type="number"] { 
+    width: 50px; 
+    padding: 4px; 
+    font-size: 15px; 
+    text-align: center; 
+    margin-left: 5px;
+  }
+  .lms-controls input[type="checkbox"] {
+    transform: scale(1.3);
+    margin-right: 5px;
+    cursor: pointer;
+  }
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    background: #ddf;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid #bbc;
+  }
+  .toggle-group label {
+    font-weight: normal;
+    cursor: pointer;
+  }
+  .lms-table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    margin-bottom: 40px; 
+    font-size: 11px; 
+    word-wrap: break-word; 
+  }
+  .lms-table th, .lms-table td { 
+    border: 1px solid #ccc; 
+    padding: 5px 3px; 
+    text-align: center; 
+    vertical-align: middle;
+  }
+  .lms-table th { 
+    background-color: #f4f4f4; 
+    cursor: pointer; 
+    user-select: none; 
+    position: sticky; 
+    top: 0; 
+  }
+  .lms-table th:hover { background-color: #ddd; }
+  .lms-table tr:hover { background-color: #fdfdfd; }
+  .name-col { 
+    text-align: left !important; 
+    font-weight: bold; 
+    min-width: 80px; 
+  }
+  .highlight { 
+    font-weight: bold; 
+    background-color: #fff9e6; 
+  }
+  .time-text {
+    font-size: 0.9em;
+    color: #555;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="lms-container">
+  <div class="lms-controls">
+    <div>
+      <label for="racesToCount">Number of best races to count:</label>
+      <input type="number" id="racesToCount" value="4" min="1" max="13" onchange="renderTables()" onkeyup="renderTables()">
+    </div>
+    <div class="toggle-group">
+      <input type="checkbox" id="showTimes" onchange="renderTables()">
+      <label for="showTimes">Show times achieved</label>
+    </div>
+    <span style="color: #555; font-size: 13px; font-style: italic;">(Click any column header to sort)</span>
+  </div>
+
+  <div id="tables-container"></div>
+</div>
+
+<script>
+// Data now includes both points (scores) and exact finishing times.
+const races = [
+  "24 Jan<br>Brockenhurst PR", 
+  "1 Feb<br>Blackmore Half", 
+  "1 Mar<br>Weymouth 10k", 
+  "22 Mar<br>Bournemouth Half", 
+  "May-Aug<br>Upton Series", 
+  "17 May<br>May-05", 
+  "14 Jun<br>Coombe 10k", 
+  "22 Jul<br>New Ten 10k", 
+  "2 Aug<br>Stur Half", 
+  "Aug<br>Magic Mile", 
+  "4 Oct<br>Studland", 
+  "15 Nov<br>Wimborne 10", 
+  "Any<br>Marathon"
+];
+
+const runners = [
+  // Men's Data
+  { name: "Paul Wilding", gender: "Men", cat: "65-69", scores: [48,null,49,49,50,48,null,null,null,null,null,null,48], times: ["00:20:03",null,"00:40:34","01:27:08","00:22:15","00:31:54",null,null,null,null,null,null,"03:09:28"] },
+  { name: "Jack Vince", gender: "Men", cat: "35-39", scores: [null,null,50,47,null,49,50,null,null,null,null,null,null], times: [null,null,"00:40:13","01:27:36",null,"00:31:19","00:42:21",null,null,null,null,null,null] },
+  { name: "Nick Gavin", gender: "Men", cat: "45-49", scores: [46,null,null,null,48,46,null,null,null,null,null,null,47], times: ["00:20:30",null,null,null,"00:23:27","00:34:32",null,null,null,null,null,null,"03:31:04"] },
+  { name: "John Morris", gender: "Men", cat: "65-69", scores: [45,null,null,null,44,null,48,null,null,null,null,null,46], times: ["00:20:56",null,null,null,"00:25:05",null,"00:50:19",null,null,null,null,null,"03:54:06"] },
+  { name: "David Williams", gender: "Men", cat: "40-44", scores: [null,null,47,null,46,44,46,null,null,null,null,null,null], times: [null,null,"00:44:02",null,"00:24:01","00:35:47","00:52:02",null,null,null,null,null,null] },
+  { name: "Ian Diffey", gender: "Men", cat: "40-44", scores: [44,null,46,45,43,43,47,null,null,null,null,null,null], times: ["00:23:07",null,"00:45:30","01:38:48","00:27:01","00:36:54","00:51:03",null,null,null,null,null,null] },
+  { name: "Matt Brooker", gender: "Men", cat: "50-54", scores: [null,null,44,null,42,42,44,null,null,null,null,null,null], times: [null,null,"00:49:45",null,"00:27:03","00:38:26","00:56:04",null,null,null,null,null,null] },
+  { name: "Bill Oakley", gender: "Men", cat: "70-74", scores: [null,null,43,44,41,null,42,null,null,null,null,null,null], times: [null,null,"00:56:35","02:13:18","00:30:26",null,"01:00:44",null,null,null,null,null,null] },
+  { name: "Robert Churchward", gender: "Men", cat: "35-39", scores: [null,null,null,50,null,50,null,null,null,null,null,null,50], times: [null,null,null,"01:23:58",null,"00:30:08",null,null,null,null,null,null,"02:59:14"] },
+  { name: "Sam Russell", gender: "Men", cat: "Senior", scores: [null,null,null,48,49,null,null,null,null,null,null,null,49], times: [null,null,null,"01:27:23","00:22:48",null,null,null,null,null,null,null,"03:09:08"] },
+  { name: "Jon Penney", gender: "Men", cat: "35-39", scores: [null,null,48,46,null,47,null,null,null,null,null,null,null], times: [null,null,"00:42:23","01:37:10",null,"00:33:48",null,null,null,null,null,null,null] },
+  { name: "Alex Thompson", gender: "Men", cat: "50-54", scores: [null,null,null,null,47,45,49,null,null,null,null,null,null], times: [null,null,null,null,"00:23:28","00:35:01","00:46:55",null,null,null,null,null,null] },
+  { name: "Gary Watts", gender: "Men", cat: "35-39", scores: [43,null,45,null,45,null,null,null,null,null,null,null,null], times: ["00:23:15",null,"00:45:30",null,"00:24:32",null,null,null,null,null,null,null,null] },
+  { name: "Robbie Burns", gender: "Men", cat: "75-79", scores: [41,null,41,null,null,39,null,null,null,null,null,null,null], times: ["00:32:04",null,"01:03:10",null,null,"00:55:26",null,null,null,null,null,null,null] },
+  { name: "Henry Palmer", gender: "Men", cat: "Senior", scores: [47,null,null,null,null,null,null,null,null,null,null,null,45], times: ["00:20:08",null,null,null,null,null,null,null,null,null,null,null,"04:48:14"] },
+  { name: "Lewis Mutton", gender: "Men", cat: "30-34", scores: [null,null,null,null,null,41,45,null,null,null,null,null,null], times: [null,null,null,null,null,"00:40:37","00:54:47",null,null,null,null,null,null] },
+  { name: "Tom Coleman", gender: "Men", cat: "45-49", scores: [42,null,42,null,null,null,null,null,null,null,null,null,null], times: ["00:30:34",null,"00:59:32",null,null,null,null,null,null,null,null,null,null] },
+  { name: "Roger Cooper", gender: "Men", cat: "65-69", scores: [null,null,null,null,null,40,43,null,null,null,null,null,null], times: [null,null,null,null,null,"00:44:46","00:59:42",null,null,null,null,null,null] },
+  { name: "Pete Sage", gender: "Men", cat: "45-49", scores: [40,null,40,null,null,null,null,null,null,null,null,null,null], times: ["00:34:00",null,"01:03:17",null,null,null,null,null,null,null,null,null,null] },
+  { name: "Jack Leach", gender: "Men", cat: "Senior", scores: [50,null,null,null,null,null,null,null,null,null,null,null,null], times: ["00:17:57",null,null,null,null,null,null,null,null,null,null,null,null] },
+  { name: "Rob Murray", gender: "Men", cat: "40-44", scores: [49,null,null,null,null,null,null,null,null,null,null,null,null], times: ["00:19:46",null,null,null,null,null,null,null,null,null,null,null,null] },
+  { name: "Dylan Townley", gender: "Men", cat: "", scores: [null,null,null,null,null,null,null,null,null,null,null,null,44], times: [null,null,null,null,null,null,null,null,null,null,null,null,"05:03:57"] },
+  { name: "Nigel Helm", gender: "Men", cat: "", scores: [null,null,null,null,null,null,null,null,null,null,null,null,43], times: [null,null,null,null,null,null,null,null,null,null,null,null,"05:07:10"] },
+  { name: "David Rustell", gender: "Men", cat: "65-69", scores: [39,null,null,null,null,null,null,null,null,null,null,null,null], times: ["00:34:43",null,null,null,null,null,null,null,null,null,null,null,null] },
+  { name: "Andy Pye", gender: "Men", cat: "55-59", scores: [38,null,null,null,null,null,null,null,null,null,null,null,null], times: ["00:42:59",null,null,null,null,null,null,null,null,null,null,null,null] },
+
+  // Women's Data
+  { name: "Donna Pearce", gender: "Women", cat: "50-54", scores: [50,null,50,50,50,50,50,null,null,null,null,null,50], times: ["00:21:42",null,"00:42:10","01:34:44","00:24:16","00:35:13","00:51:54",null,null,null,null,null,"03:21:50"] },
+  { name: "Judith Vlaarkamp", gender: "Women", cat: "45-49", scores: [49,null,null,null,49,49,null,null,null,null,null,null,45], times: ["00:23:28",null,null,null,"00:25:33","00:36:28",null,null,null,null,null,null,"05:45:00"] },
+  { name: "Karen Korenevsky", gender: "Women", cat: "50-54", scores: [47,null,48,null,47,46,48,null,null,null,null,null,null], times: ["00:27:05",null,"00:52:55",null,"00:30:28","00:47:32","00:59:31",null,null,null,null,null,null] },
+  { name: "Andrea Marshall", gender: "Women", cat: "55-59", scores: [null,null,null,49,46,47,null,null,null,null,null,null,46], times: [null,null,null,"02:10:07","00:31:50","00:43:37",null,null,null,null,null,null,"04:54:59"] },
+  { name: "Lucy Harvey", gender: "Women", cat: "Senior", scores: [48,null,null,null,null,48,null,null,null,null,null,null,49], times: ["00:24:59",null,null,null,null,"00:38:46",null,null,null,null,null,null,"04:06:23"] },
+  { name: "Annie Galanti", gender: "Women", cat: "40-44", scores: [null,null,49,null,45,null,null,null,null,null,null,null,48], times: [null,null,"00:50:53",null,"00:32:03",null,null,null,null,null,null,null,"04:10:46"] },
+  { name: "Helen Richards", gender: "Women", cat: "50-54", scores: [45,null,46,null,null,null,47,null,null,null,null,null,null], times: ["00:28:15",null,"00:59:46",null,null,null,"01:01:04",null,null,null,null,null,null] },
+  { name: "Jemma Jefferies", gender: "Women", cat: "40-44", scores: [null,null,null,null,48,null,49,null,null,null,null,null,null], times: [null,null,null,null,"00:26:19",null,"00:52:20",null,null,null,null,null,null] },
+  { name: "Tash Sage", gender: "Women", cat: "40-44", scores: [44,null,47,null,null,null,null,null,null,null,null,null,null], times: ["00:28:29",null,"00:57:52",null,null,null,null,null,null,null,null,null,null] },
+  { name: "Kirsty Barrow", gender: "Women", cat: "", scores: [null,null,null,null,null,null,null,null,null,null,null,null,47], times: [null,null,null,null,null,null,null,null,null,null,null,null,"04:38:54"] },
+  { name: "Kirsty Weston", gender: "Women", cat: "55-59", scores: [46,null,null,null,null,null,null,null,null,null,null,null,null], times: ["00:27:33",null,null,null,null,null,null,null,null,null,null,null,null] },
+  { name: "Carly Brown", gender: "Women", cat: "30-34", scores: [null,null,null,null,null,46,null,null,null,null,null,null,null], times: [null,null,null,null,null,"00:47:32",null,null,null,null,null,null,null] },
+  { name: "Georgie Roberts", gender: "Women", cat: "45-49", scores: [43,null,null,null,null,null,null,null,null,null,null,null,null], times: ["00:30:24",null,null,null,null,null,null,null,null,null,null,null,null] }
+];
+
+let currentSort = { gender: null, column: 'best', asc: false };
+
+function calculateScores() {
+  const n = parseInt(document.getElementById('racesToCount').value) || 4;
+  runners.forEach(r => {
+    const validScores = r.scores.filter(s => s !== null);
+    validScores.sort((a, b) => b - a); // Sort descending to calculate best points
+    r.total = validScores.reduce((sum, val) => sum + val, 0);
+    r.bestN = validScores.slice(0, n).reduce((sum, val) => sum + val, 0);
+  });
+}
+
+function renderTables() {
+  calculateScores();
+  const container = document.getElementById('tables-container');
+  const n = parseInt(document.getElementById('racesToCount').value) || 4;
+  const showTimes = document.getElementById('showTimes').checked;
+  container.innerHTML = '';
+  
+  ['Men', 'Women'].forEach(gender => {
+    let genderRunners = runners.filter(r => r.gender === gender);
+
+    // Dynamic Sorting Logic
+    if (currentSort.gender === gender || currentSort.gender === null) {
+      genderRunners.sort((a, b) => {
+        let valA, valB;
+        if (currentSort.column === 'name') { valA = a.name; valB = b.name; }
+        else if (currentSort.column === 'cat') { valA = a.cat || "ZZZ"; valB = b.cat || "ZZZ"; } // Blanks go to bottom
+        else if (currentSort.column === 'total') { valA = a.total; valB = b.total; }
+        else if (currentSort.column === 'best') { valA = a.bestN; valB = b.bestN; }
+        else { // Sorting an individual race column index
+          valA = a.scores[currentSort.column] || -1; 
+          valB = b.scores[currentSort.column] || -1;
+        }
+        
+        if (valA < valB) return currentSort.asc ? -1 : 1;
+        if (valA > valB) return currentSort.asc ? 1 : -1;
+        return 0;
+      });
+    }
+
+    let html = '<h2>' + gender + '\'s Standings</h2><table class="lms-table">';
+    html += '<tr>';
+    html += '<th onclick="setSort(\'' + gender + '\', \'name\')">Name</th>';
+    html += '<th onclick="setSort(\'' + gender + '\', \'cat\')">Age Cat.</th>';
+    
+    races.forEach((r, idx) => { 
+      html += '<th onclick="setSort(\'' + gender + '\', ' + idx + ')">' + r + '</th>'; 
+    });
+    
+    html += '<th onclick="setSort(\'' + gender + '\', \'total\')">Total<br>(All)</th>';
+    html += '<th onclick="setSort(\'' + gender + '\', \'best\')" style="background-color:#d4d4e4;">Best ' + n + '</th>';
+    html += '</tr>';
+
+    genderRunners.forEach(r => {
+      html += '<tr><td class="name-col">' + r.name + '</td><td>' + r.cat + '</td>';
+      r.scores.forEach((s, idx) => {
+        let cellContent = s !== null ? s : '';
+        if (showTimes && s !== null && r.times[idx]) {
+          cellContent += '<br><span class="time-text">(' + r.times[idx] + ')</span>';
+        }
+        html += '<td>' + cellContent + '</td>';
+      });
+      html += '<td>' + r.total + '</td><td class="highlight">' + r.bestN + '</td></tr>';
+    });
+    
+    html += '</table>';
+    container.innerHTML += html;
+  });
+}
+
+function setSort(gender, col) {
+  if (currentSort.gender === gender && currentSort.column === col) {
+    currentSort.asc = !currentSort.asc; // Flip sort direction
+  } else {
+    currentSort.gender = gender;
+    currentSort.column = col;
+    currentSort.asc = (col === 'name' || col === 'cat'); // Names & Categories default to A-Z, Numbers default High-Low
+  }
+  renderTables();
+}
+
+// Initial Render
+renderTables();
+</script>
+</body>
+</html>
