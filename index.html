@@ -99,7 +99,7 @@
       <input type="checkbox" id="showTimes" onchange="renderTables()">
       <label for="showTimes">Show times achieved</label>
     </div>
-    <span style="color: #555; font-size: 13px; font-style: italic;">(Click any column header to sort)</span>
+    <span style="color: #555; font-size: 13px; font-style: italic;">(Click any column header to sort. Ties resolved on count-back)</span>
   </div>
 
   <div id="tables-container"></div>
@@ -190,7 +190,7 @@ function renderTables() {
   ['Men', 'Women'].forEach(gender => {
     let genderRunners = runners.filter(r => r.gender === gender);
 
-    // Dynamic Sorting Logic
+    // Dynamic Sorting Logic & Tie Breaker
     if (currentSort.gender === gender || currentSort.gender === null) {
       genderRunners.sort((a, b) => {
         let valA, valB;
@@ -205,6 +205,20 @@ function renderTables() {
         
         if (valA < valB) return currentSort.asc ? -1 : 1;
         if (valA > valB) return currentSort.asc ? 1 : -1;
+        
+        // Count-back Tie Breaker for points/scores columns (best, total, or individual races)
+        if (currentSort.column === 'best' || currentSort.column === 'total' || typeof currentSort.column === 'number') {
+          const scoresA = a.scores.filter(s => s !== null).sort((x, y) => y - x);
+          const scoresB = b.scores.filter(s => s !== null).sort((x, y) => y - x);
+          const maxLen = Math.max(scoresA.length, scoresB.length);
+          for (let i = 0; i < maxLen; i++) {
+            const sA = scoresA[i] || 0;
+            const sB = scoresB[i] || 0;
+            if (sA !== sB) {
+              return currentSort.asc ? (sA - sB) : (sB - sA);
+            }
+          }
+        }
         return 0;
       });
     }
